@@ -1,5 +1,6 @@
 .qodo
 # Entorno virtual
+env/
 venv/
 __pycache__/
 
