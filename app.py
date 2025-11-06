@@ -22,6 +22,7 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import Flow
 from google.api_core.exceptions import InvalidArgument
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
+from flask_cors import CORS
 
 # 🔹 Google Cloud
 from google.cloud import secretmanager
@@ -34,6 +35,10 @@ from auth import auth_bp
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'clave-secreta-default')
 app.register_blueprint(auth_bp)
+
+# Esto permite solicitudes de CUALQUIER origen (incluyendo tu archivo local)
+# y permite los headers necesarios (como Authorization) y los métodos POST/GET.
+CORS(app, resources={r"/*": {"origins": "*", "allow_headers": ["Authorization", "Content-Type"]}})
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
@@ -89,9 +94,9 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 PROJECT_ID = os.getenv("GCP_PROJECT_ID", "co-impocali-cld-01")
 LOCATION = os.getenv("GCP_REGION", "us")
 PROCESSORS = {
-    "cedulas": os.getenv("PROCESSOR_CEDULAS"),
+    "cedula": os.getenv("PROCESSOR_cedula"),
     "RUT": os.getenv("PROCESSOR_RUT"),
-    "camara_comercio": os.getenv("PROCESSOR_CAMARA")
+    "camara_de_comercio": os.getenv("PROCESSOR_CAMARA")
 }
 
 
@@ -129,6 +134,8 @@ def index():
 @app.route('/admin')
 @requiere_sesion
 def admin():
+    # Obtenemos el host del request
+    host = request.host
     conn = get_db_connection()
     if not conn:
         return "Error al conectar a la base de datos", 500
@@ -143,7 +150,7 @@ def admin():
 
     solicitudes = cursor.fetchall()
     conn.close()
-    return render_template('admin.html', solicitudes=solicitudes)
+    return render_template('admin.html', solicitudes=solicitudes, host=host)
 
 
 @app.route('/detalle/<int:id>')
@@ -195,7 +202,7 @@ def detalle(id):
         "info": datos_extraidos
     }
 
-    return render_template('detalle.html', solicitud=solicitud)
+    return render_template('detalle.html', solicitud=solicitud, host=request.host)
 
 def subir_a_gcs(ruta_local, carpeta, nombre_archivo):
     client = storage.Client.from_service_account_json(os.getenv("GCS_CREDENTIALS_PATH"))
@@ -264,7 +271,7 @@ def subir_documentos():
         archivos_guardados = [
             ('doc_identidad', doc_identidad),
             ('rut', rut),
-            ('camara_comercio', camara)
+            ('camara_de_comercio', camara)
         ]
 
         rutas_temporales = {}
@@ -276,9 +283,9 @@ def subir_documentos():
             url = subir_a_gcs(path_local, carpeta_gcs, nombre_archivo_final)
             rutas_temporales[tipo] = {"local": path_local, "final_name": nombre_archivo_final, "url": url}
 
-        texto_identidad = procesar_documento_con_ai(rutas_temporales['doc_identidad']['local'], PROCESSORS["cedulas"])
+        texto_identidad = procesar_documento_con_ai(rutas_temporales['doc_identidad']['local'], PROCESSORS["cedula"])
         texto_rut = procesar_documento_con_ai(rutas_temporales['rut']['local'], PROCESSORS["RUT"])
-        texto_camara = procesar_documento_con_ai(rutas_temporales['camara_comercio']['local'], PROCESSORS["camara_comercio"])
+        texto_camara = procesar_documento_con_ai(rutas_temporales['camara_de_comercio']['local'], PROCESSORS["camara_de_comercio"])
 
         cursor.execute(
             "INSERT INTO solicitudes (usuario_id, fecha, estado, correo) VALUES (%s, %s, %s, %s)",
@@ -292,7 +299,7 @@ def subir_documentos():
                 (solicitud_id, tipo, datos['final_name'], datos['url'])
             )
 
-        for tipo_doc, datos in {'cedulas': texto_identidad, 'RUT': texto_rut, 'camara_comercio': texto_camara}.items():
+        for tipo_doc, datos in {'cedula': texto_identidad, 'RUT': texto_rut, 'camara_de_comercio': texto_camara}.items():
             for campo, detalle in datos.items():
                 cursor.execute(
                     "INSERT INTO datos_extraidos (solicitud_id, tipo_documento, campo, valor, confianza) VALUES (%s, %s, %s, %s, %s)",

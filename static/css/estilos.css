@@ -229,9 +229,12 @@ a:hover {
     font-weight: bold;
 }
 
+.oculto { 
+    display: none !important; /* Usar !important para asegurar que domine al ID si es necesario */
+}
+
 /* ====== Ocultos ====== */
 #motivoRechazo {
-    display: none;
     margin-top: 20px;
 }
 

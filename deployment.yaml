@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: impocali-deployment
+  name: impocali-autogestion-back
   labels:
     app: impocali
 spec:
@@ -17,7 +17,8 @@ spec:
       serviceAccountName: impocali-sa
       containers:
         - name: impocali-backend
-          image: us-docker.pkg.dev/co-impocali-cld-01/impocali-backend/backend:latest
+          image: us-docker.pkg.dev/co-impocali-cld-01/impocali-backend/autogestion-back:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
           env:
@@ -37,7 +38,7 @@ spec:
             - name: GMAIL_TOKEN_PATH
               value: "/gmail"
             - name: DB_HOST
-              value: "34.75.132.247"
+              value: "10.167.240.9"
             - name: DB_USER
               valueFrom:
                 secretKeyRef:

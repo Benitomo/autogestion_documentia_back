@@ -9,10 +9,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+    
+    <link rel="stylesheet" href="http://{{ host }}{{ url_for('static', filename='css/estilos.css') }}">
 </head>
 
 <body>
+    <input type="hidden" id="flaskHost" value="http://{{ host }}"> 
+
     <div class="container wide">
         <h1><i class="fas fa-user-cog"></i> Solicitudes de Clientes</h1>
 
@@ -80,16 +83,22 @@
                 window.parent.postMessage({ token }, '*');
                 console.log("🔁 Token reenviado al sistema principal desde admin.html");
             }
+            
+            // 3. CORRECCIÓN: Leer el host de la aplicación Flask
+            const flaskHost = document.getElementById('flaskHost')?.value || '';
 
             document.querySelectorAll('.ver-detalle').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
                     const id = btn.getAttribute('data-id');
-                    window.location.href = `/detalle/${id}?token=${encodeURIComponent(token)}`;
+                    
+                    // 3. CORRECCIÓN: Usar la URL ABSOLUTA para navegación
+                    window.location.href = `${flaskHost}/detalle/${id}?token=${encodeURIComponent(token)}`;
                 });
             });
         });
     </script>
+
 </body>
 
 </html>
